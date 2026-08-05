@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:fishing",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/junk", "weight": 10, "quality": -2 },
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/treasure", "weight": 5, "quality": 2 },
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/fish", "weight": 55, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:glimmerfin", "weight": 10, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:swamp_eel", "weight": 10, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:reef_crab", "weight": 10, "quality": 0 }
+      ]
+    }
+  ]
+}

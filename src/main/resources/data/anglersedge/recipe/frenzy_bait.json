@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    { "item": "minecraft:string" },
+    { "item": "minecraft:redstone" }
+  ],
+  "result": { "id": "anglersedge:frenzy_bait", "count": 4 }
+}

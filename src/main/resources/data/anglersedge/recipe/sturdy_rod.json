@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  C",
+    " CS",
+    "C S"
+  ],
+  "key": {
+    "C": { "item": "minecraft:copper_ingot" },
+    "S": { "item": "minecraft:string" }
+  },
+  "result": { "id": "anglersedge:sturdy_rod", "count": 1 }
+}

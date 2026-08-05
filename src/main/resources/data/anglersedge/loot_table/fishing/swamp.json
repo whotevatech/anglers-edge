@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:fishing",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/junk", "weight": 15, "quality": -2 },
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/treasure", "weight": 3, "quality": 2 },
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/fish", "weight": 52, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:swamp_eel", "weight": 30, "quality": 1 }
+      ]
+    }
+  ]
+}

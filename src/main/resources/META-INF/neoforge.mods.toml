@@ -1,0 +1,25 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/example/anglersedge/issues"
+
+[[mods]]
+modId = "anglersedge"
+version = "1.0.0"
+displayName = "Angler's Edge"
+authors = "Joshua"
+description = '''Rod tiers, bait, an upgrade station and an auto-fisher for 1.21.1.'''
+
+[[dependencies.anglersedge]]
+    modId = "neoforge"
+    type = "required"
+    versionRange = "[21.1.0,)"
+    ordering = "NONE"
+    side = "BOTH"
+
+[[dependencies.anglersedge]]
+    modId = "minecraft"
+    type = "required"
+    versionRange = "[1.21.1,1.22)"
+    ordering = "NONE"
+    side = "BOTH"

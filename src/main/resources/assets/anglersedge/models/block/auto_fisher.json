@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "anglersedge:block/auto_fisher_top",
+    "bottom": "anglersedge:block/auto_fisher_side",
+    "side": "anglersedge:block/auto_fisher_side"
+  }
+}

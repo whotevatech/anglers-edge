@@ -1,0 +1,36 @@
+{
+  "itemGroup.anglersedge": "Angler's Edge",
+
+  "item.anglersedge.sturdy_rod": "Sturdy Rod",
+  "item.anglersedge.anglers_rod": "Angler's Rod",
+  "item.anglersedge.leviathan_rod": "Leviathan Rod",
+  "item.anglersedge.basic_bait": "Basic Bait",
+  "item.anglersedge.shiny_lure": "Shiny Lure",
+  "item.anglersedge.frenzy_bait": "Frenzy Bait",
+  "item.anglersedge.ghost_bait": "Ghost Bait",
+  "item.anglersedge.fishing_journal": "Fishing Journal",
+  "item.anglersedge.reel_upgrade": "Reel Upgrade",
+  "item.anglersedge.glimmerfin": "Glimmerfin",
+  "item.anglersedge.swamp_eel": "Swamp Eel",
+  "item.anglersedge.abyssal_ray": "Abyssal Ray",
+  "item.anglersedge.leviathan_scale": "Leviathan Scale",
+  "item.anglersedge.reef_crab": "Reef Crab",
+  "item.anglersedge.anglerfish": "Anglerfish",
+  "item.anglersedge.shark_tooth": "Shark Tooth",
+  "item.anglersedge.net": "Net",
+
+  "block.anglersedge.upgrade_station": "Upgrade Station",
+  "block.anglersedge.auto_fisher": "Auto-Fisher",
+  "block.anglersedge.fish_trophy": "Fish Trophy",
+  "block.anglersedge.breeding_tank": "Breeding Tank",
+
+  "container.anglersedge.upgrade_station": "Upgrade Station",
+  "container.anglersedge.auto_fisher": "Auto-Fisher",
+  "container.anglersedge.breeding_tank": "Breeding Tank",
+
+  "tooltip.anglersedge.rod_stats": "Luck +%s, Lure +%s",
+  "tooltip.anglersedge.rod_bonus_roll": "Leviathan's Bounty: %s%% chance of a bonus catch",
+  "tooltip.anglersedge.bait_hint": "Hold in off-hand while fishing",
+  "tooltip.anglersedge.journal_species": "%s species discovered",
+  "tooltip.anglersedge.journal_total": "%s total catches"
+}

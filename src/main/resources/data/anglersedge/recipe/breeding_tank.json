@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "GGG",
+    "GWG",
+    "PPP"
+  ],
+  "key": {
+    "G": { "item": "minecraft:glass" },
+    "W": { "item": "minecraft:water_bucket" },
+    "P": { "item": "minecraft:oak_planks" }
+  },
+  "result": { "id": "anglersedge:breeding_tank", "count": 1 }
+}

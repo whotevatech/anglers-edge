@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " R ",
+    "PNP",
+    "PHP"
+  ],
+  "key": {
+    "R": { "item": "minecraft:fishing_rod" },
+    "N": { "item": "anglersedge:net" },
+    "H": { "item": "minecraft:hopper" },
+    "P": { "item": "minecraft:oak_planks" }
+  },
+  "result": { "id": "anglersedge:auto_fisher", "count": 1 }
+}

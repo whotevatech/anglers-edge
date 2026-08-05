@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "anglersedge:block/breeding_tank_top",
+    "bottom": "anglersedge:block/breeding_tank_side",
+    "side": "anglersedge:block/breeding_tank_side"
+  }
+}

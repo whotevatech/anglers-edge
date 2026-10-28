@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:heart_of_the_sea"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.whale.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.whale.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "seen": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "whale_sighted"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "seen"
+    ]
+  ],
+  "parent": "anglersedge:root"
+}

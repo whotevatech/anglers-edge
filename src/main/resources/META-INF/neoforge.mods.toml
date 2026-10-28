@@ -1,14 +1,14 @@
 modLoader = "javafml"
-loaderVersion = "[4,)"
-license = "MIT"
-issueTrackerURL = "https://github.com/example/anglersedge/issues"
+loaderVersion = "${loader_version_range}"
+license = "${mod_license}"
+issueTrackerURL = "https://github.com/whotevatech/anglers-edge/issues"
 
 [[mods]]
-modId = "anglersedge"
-version = "1.0.0"
-displayName = "Angler's Edge"
-authors = "Joshua"
-description = '''Rod tiers, bait, an upgrade station and an auto-fisher for 1.21.1.'''
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+authors = "${mod_authors}"
+description = '''${mod_description}'''
 
 [[dependencies.anglersedge]]
     modId = "neoforge"

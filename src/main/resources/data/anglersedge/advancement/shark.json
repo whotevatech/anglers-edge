@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "anglersedge:shark_tooth"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.shark.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.shark.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "slain": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "shark_slain"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "slain"
+    ]
+  ],
+  "parent": "anglersedge:first_catch"
+}

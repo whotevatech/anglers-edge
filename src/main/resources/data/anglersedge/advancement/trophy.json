@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "anglersedge:fish_trophy"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.trophy.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.trophy.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "mounted": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "trophy_mounted"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "mounted"
+    ]
+  ],
+  "parent": "anglersedge:first_catch"
+}

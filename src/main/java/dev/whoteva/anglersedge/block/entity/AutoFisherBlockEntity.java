@@ -1,7 +1,9 @@
 package dev.whoteva.anglersedge.block.entity;
 
 import dev.whoteva.anglersedge.block.ModBlockEntities;
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import dev.whoteva.anglersedge.inventory.AutoFisherMenu;
+import dev.whoteva.anglersedge.item.BaitItem;
 import dev.whoteva.anglersedge.item.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -11,11 +13,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -33,22 +38,56 @@ import net.minecraft.world.phys.Vec3;
  * Sits next to water and periodically rolls the vanilla fishing loot table into its own
  * inventory - no bobber, no bite timer, just "is there water nearby, and has enough time passed".
  *
- * <p>Passive by default ({@link #PASSIVE_INTERVAL} ticks between catches). Any redstone signal
- * speeds it up to {@link #POWERED_INTERVAL}. Output sits in a 9-slot inventory that a hopper (or
- * this mod's {@code IItemHandler} capability, registered in {@link dev.whoteva.anglersedge.AnglersEdge})
- * can pull from directly.
+ * <p>Passive by default. Any redstone signal speeds it up. Intervals live in
+ * {@link dev.whoteva.anglersedge.config.AnglersConfig}. Output sits in a 9-slot inventory that a
+ * hopper (or this mod's {@code IItemHandler} capability) can pull from directly. A bait in the
+ * third upgrade slot is consumed once per cycle that actually stores a catch.
  */
 public class AutoFisherBlockEntity extends BlockEntity implements Container, Clearable, MenuProvider {
 
-    private static final int PASSIVE_INTERVAL = 200;
-    private static final int POWERED_INTERVAL = 60;
+    public static final int FLAG_WATER = 1;
+    public static final int FLAG_POWERED = 1 << 1;
+    public static final int FLAG_STALLED = 1 << 2;
+    public static final int FLAG_FILTER = 1 << 3;
+    public static final int FLAG_REEL = 1 << 4;
+    public static final int FLAG_BAIT = 1 << 5;
+
     private static final int SLOTS = 9;
 
     private NonNullList<ItemStack> items = NonNullList.withSize(SLOTS, ItemStack.EMPTY);
-    private int cooldown = PASSIVE_INTERVAL;
+    private int cooldown = 200;
+    private int interval = 200;
+    private boolean hasWater;
+    private boolean powered;
+    private boolean stalled;
 
-    /** Slot 0: filter (any item - only matching catches are kept). Slot 1: reel upgrade. */
-    private final SimpleContainer upgrades = new SimpleContainer(2);
+    /** Slot 0: filter. Slot 1: reel upgrade. Slot 2: bait, consumed once per successful cycle. */
+    private final SimpleContainer upgrades = new SimpleContainer(3);
+
+    private final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int index) {
+            return switch (index) {
+                case 0 -> cooldown;
+                case 1 -> interval;
+                case 2 -> statusFlags();
+                default -> 0;
+            };
+        }
+
+        @Override
+        public void set(int index, int value) {
+        }
+
+        @Override
+        public int getCount() {
+            return 3;
+        }
+    };
+
+    public ContainerData data() {
+        return data;
+    }
 
     public AutoFisherBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.AUTO_FISHER.get(), pos, state);
@@ -63,7 +102,15 @@ public class AutoFisherBlockEntity extends BlockEntity implements Container, Cle
         if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
-        if (!entity.hasAdjacentWater(level, pos)) {
+        entity.hasWater = entity.hasAdjacentWater(level, pos);
+        entity.powered = level.hasNeighborSignal(pos);
+        if (!entity.hasWater) {
+            entity.stalled = false;
+            entity.interval = AnglersConfig.PASSIVE_INTERVAL.get();
+            return;
+        }
+        if (entity.outputFull()) {
+            entity.stalled = true;
             return;
         }
 
@@ -71,13 +118,13 @@ public class AutoFisherBlockEntity extends BlockEntity implements Container, Cle
         if (entity.cooldown > 0) {
             return;
         }
-        int interval = level.hasNeighborSignal(pos) ? POWERED_INTERVAL : PASSIVE_INTERVAL;
-        // Same "good conditions bite faster" idea as the handheld rod - rain or night shaves
-        // a third off the wait, floored so a powered+weather combo can't hit 0.
-        if (level.isRaining() || level.isNight()) {
-            interval = Math.max(20, interval * 2 / 3);
+
+        int next = entity.powered ? AnglersConfig.POWERED_INTERVAL.get() : AnglersConfig.PASSIVE_INTERVAL.get();
+        if (AnglersConfig.WEATHER_BONUSES.get() && (level.isRaining() || level.isNight())) {
+            next = Math.max(20, next * AnglersConfig.WEATHER_INTERVAL_PERCENT.get() / 100);
         }
-        entity.cooldown = interval;
+        entity.interval = next;
+        entity.cooldown = next;
 
         LootTable table = serverLevel.getServer().reloadableRegistries().getLootTable(lootTableFor(level, pos));
         LootParams params = new LootParams.Builder(serverLevel)
@@ -89,16 +136,68 @@ public class AutoFisherBlockEntity extends BlockEntity implements Container, Cle
         boolean hasReelUpgrade = entity.upgrades.getItem(1).is(ModItems.REEL_UPGRADE.get());
         int rolls = hasReelUpgrade ? 2 : 1;
 
+        NonNullList<ItemStack> caught = NonNullList.create();
         for (int roll = 0; roll < rolls; roll++) {
-            for (ItemStack caught : table.getRandomItems(params, serverLevel.getRandom())) {
-                if (!filter.isEmpty() && !caught.is(filter.getItem())) {
-                    // Filtered out - doesn't count as a catch, just discarded.
+            for (ItemStack stack : table.getRandomItems(params, serverLevel.getRandom())) {
+                if (!filter.isEmpty() && !stack.is(filter.getItem())) {
                     continue;
                 }
-                dev.whoteva.anglersedge.util.FishWeight.apply(caught, serverLevel.getRandom());
-                entity.insert(caught);
+                caught.add(stack);
             }
         }
+        if (caught.isEmpty()) {
+            entity.stalled = false;
+            return;
+        }
+
+        ItemStack bait = entity.upgrades.getItem(2);
+        if (bait.getItem() instanceof BaitItem baitItem) {
+            baitItem.effect().apply(caught, serverLevel.getRandom());
+        }
+
+        boolean inserted = false;
+        for (ItemStack stack : caught) {
+            if (stack.isEmpty()) {
+                continue;
+            }
+            dev.whoteva.anglersedge.util.FishWeight.apply(stack, serverLevel.getRandom());
+            int before = stack.getCount();
+            entity.insert(stack);
+            if (stack.getCount() != before) {
+                inserted = true;
+            }
+        }
+
+        if (!inserted) {
+            entity.stalled = true;
+            entity.cooldown = 20;
+            return;
+        }
+        entity.stalled = false;
+        if (bait.getItem() instanceof BaitItem) {
+            bait.shrink(1);
+        }
+        serverLevel.playSound(null, pos, SoundEvents.FISHING_BOBBER_RETRIEVE, SoundSource.BLOCKS, 0.35F, 1.0F);
+    }
+
+    private int statusFlags() {
+        int flags = 0;
+        if (hasWater) flags |= FLAG_WATER;
+        if (powered) flags |= FLAG_POWERED;
+        if (stalled) flags |= FLAG_STALLED;
+        if (!upgrades.getItem(0).isEmpty()) flags |= FLAG_FILTER;
+        if (upgrades.getItem(1).is(ModItems.REEL_UPGRADE.get())) flags |= FLAG_REEL;
+        if (upgrades.getItem(2).getItem() instanceof BaitItem) flags |= FLAG_BAIT;
+        return flags;
+    }
+
+    private boolean outputFull() {
+        for (ItemStack stack : items) {
+            if (stack.isEmpty() || stack.getCount() < stack.getMaxStackSize()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -199,7 +298,7 @@ public class AutoFisherBlockEntity extends BlockEntity implements Container, Cle
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
         return new AutoFisherMenu(containerId, playerInventory, this, upgrades,
-                ContainerLevelAccess.create(level, worldPosition));
+                ContainerLevelAccess.create(level, worldPosition), data);
     }
 
     // --- persistence ---------------------------------------------------------------------

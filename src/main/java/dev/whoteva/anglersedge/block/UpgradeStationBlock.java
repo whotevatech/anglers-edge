@@ -3,9 +3,11 @@ package dev.whoteva.anglersedge.block;
 import com.mojang.serialization.MapCodec;
 import dev.whoteva.anglersedge.block.entity.UpgradeStationBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -46,5 +48,18 @@ public class UpgradeStationBlock extends BaseEntityBlock {
             player.openMenu(menuProvider);
         }
         return InteractionResult.CONSUME;
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        // The result slot is a live preview. Dropping it alongside the inputs would duplicate the craft.
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof UpgradeStationBlockEntity station) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), station.getItem(0));
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), station.getItem(1));
+            station.setItem(0, ItemStack.EMPTY);
+            station.setItem(1, ItemStack.EMPTY);
+            station.setItem(2, ItemStack.EMPTY);
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }

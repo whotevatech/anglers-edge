@@ -1,6 +1,7 @@
 package dev.whoteva.anglersedge.inventory;
 
 import dev.whoteva.anglersedge.item.ModItems;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -38,6 +39,28 @@ public final class BaitPath {
     public static int ingredientBCost(ItemStack ingredientA, ItemStack ingredientB) {
         Recipe recipe = find(ingredientA, ingredientB);
         return recipe == null ? 0 : recipe.countB();
+    }
+
+    /** Status line when the left slot is string, or null when this is not a bait craft. */
+    public static Component hint(ItemStack ingredientA, ItemStack ingredientB) {
+        if (ingredientA.isEmpty() || !ingredientA.is(Items.STRING)) {
+            return null;
+        }
+        if (!preview(ingredientA, ingredientB).isEmpty()) {
+            return Component.translatable("gui.anglersedge.upgrade_ready", preview(ingredientA, ingredientB).getHoverName());
+        }
+        if (ingredientB.isEmpty()) {
+            return Component.translatable("gui.anglersedge.bait_need");
+        }
+        for (Recipe recipe : RECIPES) {
+            if (ingredientB.is(recipe.ingredientB()) && ingredientB.getCount() < recipe.countB()) {
+                return Component.translatable("gui.anglersedge.upgrade_short",
+                        recipe.countB(),
+                        Component.translatable(recipe.ingredientB().getDescriptionId()),
+                        ingredientB.getCount());
+            }
+        }
+        return Component.translatable("gui.anglersedge.bait_wrong");
     }
 
     private static Recipe find(ItemStack a, ItemStack b) {

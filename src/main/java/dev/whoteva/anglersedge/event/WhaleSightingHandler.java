@@ -1,14 +1,16 @@
 package dev.whoteva.anglersedge.event;
 
+import dev.whoteva.anglersedge.advancement.AnglersCriteria;
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import dev.whoteva.anglersedge.util.BiomeCategory;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FishingHook;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -22,22 +24,24 @@ import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
  */
 public final class WhaleSightingHandler {
 
-    private static final float SIGHTING_CHANCE = 0.05F;
-
     private WhaleSightingHandler() {
     }
 
     @SubscribeEvent
     public static void onItemFished(ItemFishedEvent event) {
         Player player = event.getEntity();
-        if (player.getRandom().nextFloat() >= SIGHTING_CHANCE) {
+        if (player.getRandom().nextFloat() >= AnglersConfig.WHALE_CHANCE.get()) {
             return;
         }
         if (!(player.level() instanceof ServerLevel serverLevel)) {
             return;
         }
         FishingHook hook = event.getHookEntity();
-        if (!BiomeCategory.at(serverLevel, hook.blockPosition()).equals("ocean")) {
+        String category = BiomeCategory.at(serverLevel, hook.blockPosition());
+        if (!category.equals("ocean") && !category.equals("warm") && !category.equals("cold") && !category.equals("deep")) {
+            return;
+        }
+        if (!EncounterGate.tryClaim(hook)) {
             return;
         }
 
@@ -48,12 +52,18 @@ public final class WhaleSightingHandler {
         double z = hook.getZ() + Math.sin(angle) * distance;
         double y = serverLevel.getSeaLevel();
 
-        serverLevel.sendParticles(ParticleTypes.SPLASH, x, y, z, 40, 1.8, 0.4, 1.8, 0.1);
-        serverLevel.sendParticles(ParticleTypes.BUBBLE_COLUMN_UP, x, y, z, 20, 1.2, 0.6, 1.2, 0.05);
-        serverLevel.playSound((Player) null, BlockPos.containing(x, y, z), SoundEvents.ELDER_GUARDIAN_AMBIENT,
+        WaterTelegraph.burst(serverLevel, x, y + 0.2, z, true);
+        WaterTelegraph.burst(serverLevel, hook.getX(), hook.getY(), hook.getZ(), false);
+        serverLevel.playSound(null, BlockPos.containing(x, y, z), SoundEvents.ELDER_GUARDIAN_AMBIENT,
                 SoundSource.AMBIENT, 2.0F, 0.5F);
+        serverLevel.playSound(null, hook.blockPosition(), SoundEvents.GENERIC_SPLASH, SoundSource.AMBIENT, 0.6F, 0.5F);
 
-        player.sendSystemMessage(Component.literal("A massive shape breaches the surface in the distance...")
-                .withStyle(ChatFormatting.BLUE, ChatFormatting.ITALIC));
+        Component message = Component.translatable("message.anglersedge.whale")
+                .withStyle(ChatFormatting.BLUE, ChatFormatting.ITALIC);
+        player.displayClientMessage(message, true);
+        player.sendSystemMessage(message);
+        if (player instanceof ServerPlayer serverPlayer) {
+            AnglersCriteria.trigger(serverPlayer, AnglersCriteria.WHALE_SIGHTED);
+        }
     }
 }

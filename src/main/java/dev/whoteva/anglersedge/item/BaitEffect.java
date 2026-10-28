@@ -1,5 +1,6 @@
 package dev.whoteva.anglersedge.item;
 
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -38,7 +39,7 @@ public enum BaitEffect {
     BONUS_TREASURE_CHANCE {
         @Override
         public void apply(NonNullList<ItemStack> drops, RandomSource random) {
-            if (random.nextFloat() < 0.2F) {
+            if (random.nextFloat() < AnglersConfig.SHINY_LURE_CHANCE.get()) {
                 drops.add(new ItemStack(randomOf(TREASURE, random)));
             }
         }
@@ -77,6 +78,10 @@ public enum BaitEffect {
     );
 
     public abstract void apply(NonNullList<ItemStack> drops, RandomSource random);
+
+    public String descriptionKey() {
+        return "tooltip.anglersedge.bait." + name().toLowerCase(java.util.Locale.ROOT);
+    }
 
     /**
      * Cosmetic-only: which particle drifts up from the bobber while this bait is active, so a

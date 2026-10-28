@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:cod"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.first_catch.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.first_catch.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "caught": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "first_catch"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "caught"
+    ]
+  ],
+  "parent": "anglersedge:root"
+}

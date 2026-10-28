@@ -1,5 +1,6 @@
 package dev.whoteva.anglersedge.item;
 
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -78,8 +79,9 @@ public class TieredFishingRodItem extends FishingRodItem {
             // Rain nudges the odds of a treasure roll (luck), night nudges the bite speed
             // (lure) - both are just +1 to the constructor args vanilla already exposes, so
             // this needed no hook/mixin work at all.
-            int effectiveLuck = luckBonus + (level.isRaining() ? 1 : 0);
-            int effectiveLure = lureBonus + (level.isNight() ? 1 : 0);
+            boolean weather = AnglersConfig.WEATHER_BONUSES.get();
+            int effectiveLuck = luckBonus + (weather && level.isRaining() ? 1 : 0);
+            int effectiveLure = lureBonus + (weather && level.isNight() ? 1 : 0);
             FishingHook hook = new FishingHook(player, level, effectiveLuck, effectiveLure);
             level.addFreshEntity(hook);
         }
@@ -105,8 +107,12 @@ public class TieredFishingRodItem extends FishingRodItem {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.anglersedge.rod_stats", luckBonus, lureBonus)
                 .withStyle(ChatFormatting.GRAY));
-        if (bonusRollChance > 0f) {
-            tooltip.add(Component.translatable("tooltip.anglersedge.rod_bonus_roll", Math.round(bonusRollChance * 100))
+        if (AnglersConfig.WEATHER_BONUSES.get()) {
+            tooltip.add(Component.translatable("tooltip.anglersedge.rod_weather").withStyle(ChatFormatting.DARK_GRAY));
+        }
+        float chance = bonusRollChance > 0f ? AnglersConfig.LEVIATHAN_BONUS_CHANCE.get().floatValue() : 0f;
+        if (chance > 0f) {
+            tooltip.add(Component.translatable("tooltip.anglersedge.rod_bonus_roll", Math.round(chance * 100))
                     .withStyle(ChatFormatting.DARK_AQUA));
         }
     }

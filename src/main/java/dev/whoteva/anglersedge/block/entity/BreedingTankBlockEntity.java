@@ -1,8 +1,10 @@
 package dev.whoteva.anglersedge.block.entity;
 
 import dev.whoteva.anglersedge.block.ModBlockEntities;
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import dev.whoteva.anglersedge.inventory.BreedingTankMenu;
-import dev.whoteva.anglersedge.item.ModItems;
+import dev.whoteva.anglersedge.util.FishCatalog;
+import dev.whoteva.anglersedge.util.FishWeight;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -10,6 +12,8 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
@@ -17,25 +21,28 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
-import java.util.Set;
-
 /**
  * A slower, stockable alternative to the auto-fisher: stock two of the same fish species in the
- * breeding-pair slots, and - as long as the tank sits next to water - it periodically produces
- * one more of that species into the output slots. The pair itself is never consumed, so this is
- * a standing "farm" rather than a one-shot craft, which felt like the right shape for something
- * called a breeding tank.
+ * breeding-pair slots, and — as long as the tank sits next to water — it periodically produces
+ * one more of that species into the output slots. The pair itself is never consumed.
+ * Which items count as fish comes from {@link FishCatalog}.
  */
 public class BreedingTankBlockEntity extends BlockEntity implements Container, Clearable, MenuProvider {
+
+    public static final int STATUS_NO_WATER = 0;
+    public static final int STATUS_NEED_PAIR = 1;
+    public static final int STATUS_MISMATCH = 2;
+    public static final int STATUS_BREEDING = 3;
+    public static final int STATUS_FULL = 4;
 
     public static final int PARENT_A = 0;
     public static final int PARENT_B = 1;
@@ -43,66 +50,98 @@ public class BreedingTankBlockEntity extends BlockEntity implements Container, C
     private static final int OUTPUT_SLOTS = 6;
     public static final int SLOTS = OUTPUT_START + OUTPUT_SLOTS;
 
-    private static final int BREED_TIME = 600;
-
-    // Lazily built, not an eagerly-evaluated static field - see FishTrophyBlock's displayable()
-    // for why referencing other DeferredHolders too early throws "trying to access unbound
-    // value". BlockEntity classes are only loaded when a player actually places one, which is
-    // safely after registration, but the lazy pattern costs nothing and stays consistent.
-    private static Set<Item> breedable;
-
-    private static Set<Item> breedable() {
-        if (breedable == null) {
-            breedable = Set.of(
-                    Items.COD, Items.SALMON, Items.PUFFERFISH, Items.TROPICAL_FISH,
-                    ModItems.GLIMMERFIN.get(), ModItems.SWAMP_EEL.get(), ModItems.ABYSSAL_RAY.get(),
-                    ModItems.REEF_CRAB.get(), ModItems.ANGLERFISH.get());
-        }
-        return breedable;
-    }
-
     public static boolean isBreedable(Item item) {
-        return breedable().contains(item);
+        return FishCatalog.isBreedable(item);
     }
 
     private NonNullList<ItemStack> items = NonNullList.withSize(SLOTS, ItemStack.EMPTY);
     private int progress;
+    private int status = STATUS_NEED_PAIR;
+
+    private final ContainerData data = new ContainerData() {
+        @Override
+        public int get(int index) {
+            return switch (index) {
+                case 0 -> progress;
+                case 1 -> AnglersConfig.BREED_TIME.get();
+                case 2 -> status;
+                default -> 0;
+            };
+        }
+
+        @Override
+        public void set(int index, int value) {
+        }
+
+        @Override
+        public int getCount() {
+            return 3;
+        }
+    };
 
     public BreedingTankBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.BREEDING_TANK.get(), pos, state);
+    }
+
+    public ContainerData data() {
+        return data;
     }
 
     public int progress() {
         return progress;
     }
 
-    public static int breedTime() {
-        return BREED_TIME;
-    }
-
     public static void tick(Level level, BlockPos pos, BlockState state, BreedingTankBlockEntity entity) {
-        if (!(level instanceof ServerLevel)) {
+        if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
         if (!entity.hasAdjacentWater(level, pos)) {
             entity.progress = 0;
+            entity.status = STATUS_NO_WATER;
             return;
         }
 
         ItemStack a = entity.items.get(PARENT_A);
         ItemStack b = entity.items.get(PARENT_B);
-        if (a.isEmpty() || b.isEmpty() || !ItemStack.isSameItem(a, b) || !isBreedable(a.getItem())) {
+        if (a.isEmpty() || b.isEmpty()) {
             entity.progress = 0;
+            entity.status = STATUS_NEED_PAIR;
+            return;
+        }
+        if (!ItemStack.isSameItem(a, b) || !isBreedable(a.getItem())) {
+            entity.progress = 0;
+            entity.status = STATUS_MISMATCH;
+            return;
+        }
+        if (!entity.hasOutputSpace()) {
+            entity.status = STATUS_FULL;
             return;
         }
 
+        entity.status = STATUS_BREEDING;
         entity.progress++;
-        if (entity.progress < BREED_TIME) {
+        int breedTime = AnglersConfig.BREED_TIME.get();
+        if (entity.progress % 20 == 0) {
             entity.setChanged();
+        }
+        if (entity.progress < breedTime) {
             return;
         }
         entity.progress = 0;
-        entity.insertOutput(new ItemStack(a.getItem(), 1));
+        ItemStack offspring = new ItemStack(a.getItem(), 1);
+        FishWeight.apply(offspring, serverLevel.getRandom());
+        entity.insertOutput(offspring);
+        serverLevel.playSound(null, pos, SoundEvents.FISHING_BOBBER_SPLASH, SoundSource.BLOCKS, 0.4F, 1.15F);
+    }
+
+    /** Offspring carry a unique name, so they need an empty output slot rather than a partial stack. */
+    private boolean hasOutputSpace() {
+        for (int i = OUTPUT_START; i < SLOTS; i++) {
+            if (items.get(i).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean hasAdjacentWater(Level level, BlockPos pos) {
@@ -186,7 +225,7 @@ public class BreedingTankBlockEntity extends BlockEntity implements Container, C
 
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new BreedingTankMenu(containerId, playerInventory, this, ContainerLevelAccess.create(level, worldPosition));
+        return new BreedingTankMenu(containerId, playerInventory, this, ContainerLevelAccess.create(level, worldPosition), data);
     }
 
     // --- persistence ---------------------------------------------------------------------

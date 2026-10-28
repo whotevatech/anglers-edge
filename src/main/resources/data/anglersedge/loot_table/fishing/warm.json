@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:fishing",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/junk", "weight": 8, "quality": -2 },
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/treasure", "weight": 6, "quality": 2 },
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/fish", "weight": 34, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:sunscale", "weight": 24, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:reef_crab", "weight": 16, "quality": 0 },
+        { "type": "minecraft:item", "name": "anglersedge:glimmerfin", "weight": 8, "quality": 1 }
+      ]
+    }
+  ]
+}

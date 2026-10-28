@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "anglersedge:glimmerfin"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.species_5.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.species_5.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "caught": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "species_5"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "caught"
+    ]
+  ],
+  "parent": "anglersedge:first_catch"
+}

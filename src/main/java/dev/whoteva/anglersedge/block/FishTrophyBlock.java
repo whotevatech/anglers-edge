@@ -1,17 +1,17 @@
 package dev.whoteva.anglersedge.block;
 
 import com.mojang.serialization.MapCodec;
+import dev.whoteva.anglersedge.advancement.AnglersCriteria;
 import dev.whoteva.anglersedge.block.entity.FishTrophyBlockEntity;
-import dev.whoteva.anglersedge.item.ModItems;
+import dev.whoteva.anglersedge.util.FishCatalog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Containers;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -20,37 +20,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
-import java.util.Set;
-
 /**
- * A decorative case that mounts exactly one fish. Right-click with a fish item in hand to mount
- * it; right-click empty-handed to take it back out. Any vanilla or modded fish drop works, not
- * just this mod's own species - a trophy case that could only hold three specific items felt
- * needlessly restrictive.
+ * A decorative case that mounts exactly one catalog fish. Right-click with a fish to mount it;
+ * right-click empty-handed to take it back. The accepted set is {@link FishCatalog}, resolved
+ * when the player clicks so item registration has already finished.
  */
 public class FishTrophyBlock extends BaseEntityBlock {
 
     public static final MapCodec<FishTrophyBlock> CODEC = simpleCodec(FishTrophyBlock::new);
-
-    // Built lazily, NOT as an eagerly-evaluated static field: NeoForge fires the blocks
-    // RegisterEvent before the items one (BlockItems need their block to already exist), so
-    // constructing this block - which loads this class - happens before ModItems.GLIMMERFIN and
-    // friends are bound. Calling DeferredHolder#get() that early throws "trying to access
-    // unbound value". Deferring construction to first actual use (a player right-clicking the
-    // block, necessarily after the whole mod has finished loading) sidesteps the ordering issue
-    // entirely.
-    private static Set<Item> displayable;
-
-    private static Set<Item> displayable() {
-        if (displayable == null) {
-            displayable = Set.of(
-                    Items.COD, Items.SALMON, Items.PUFFERFISH, Items.TROPICAL_FISH,
-                    ModItems.GLIMMERFIN.get(), ModItems.SWAMP_EEL.get(), ModItems.ABYSSAL_RAY.get(),
-                    ModItems.LEVIATHAN_SCALE.get(), ModItems.REEF_CRAB.get(), ModItems.ANGLERFISH.get(),
-                    ModItems.SHARK_TOOTH.get());
-        }
-        return displayable;
-    }
 
     public FishTrophyBlock(Properties properties) {
         super(properties);
@@ -74,7 +51,7 @@ public class FishTrophyBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                                Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!(level.getBlockEntity(pos) instanceof FishTrophyBlockEntity trophy) || !displayable().contains(stack.getItem())
+        if (!(level.getBlockEntity(pos) instanceof FishTrophyBlockEntity trophy) || !FishCatalog.isDisplayable(stack.getItem())
                 || !trophy.displayed().isEmpty()) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
@@ -83,6 +60,9 @@ public class FishTrophyBlock extends BaseEntityBlock {
             stack.shrink(1);
             trophy.setItem(0, mounted);
             sync(level, pos, state);
+            if (player instanceof ServerPlayer serverPlayer) {
+                AnglersCriteria.trigger(serverPlayer, AnglersCriteria.TROPHY_MOUNTED);
+            }
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
     }

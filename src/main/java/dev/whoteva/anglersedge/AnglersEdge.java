@@ -1,9 +1,11 @@
 package dev.whoteva.anglersedge;
 
+import dev.whoteva.anglersedge.advancement.AnglersCriteria;
 import dev.whoteva.anglersedge.block.ModBlockEntities;
 import dev.whoteva.anglersedge.block.ModBlocks;
 import dev.whoteva.anglersedge.block.ModCapabilities;
 import dev.whoteva.anglersedge.client.ClientSetup;
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import dev.whoteva.anglersedge.event.BaitParticleHandler;
 import dev.whoteva.anglersedge.event.FishingEventHandler;
 import dev.whoteva.anglersedge.event.LeviathanEncounterHandler;
@@ -12,7 +14,9 @@ import dev.whoteva.anglersedge.event.WhaleSightingHandler;
 import dev.whoteva.anglersedge.inventory.ModMenus;
 import dev.whoteva.anglersedge.item.ModItems;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
@@ -27,12 +31,15 @@ public class AnglersEdge {
 
     public static final String MOD_ID = "anglersedge";
 
-    public AnglersEdge(IEventBus modEventBus) {
+    public AnglersEdge(IEventBus modEventBus, ModContainer container) {
+        container.registerConfig(ModConfig.Type.COMMON, AnglersConfig.SPEC);
+
         ModItems.ITEMS.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
         ModMenus.MENUS.register(modEventBus);
         ModCreativeTabs.TABS.register(modEventBus);
+        AnglersCriteria.TRIGGERS.register(modEventBus);
 
         modEventBus.addListener(ModCreativeTabs::buildContents);
         modEventBus.addListener(ModCapabilities::register);

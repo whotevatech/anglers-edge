@@ -1,15 +1,18 @@
 package dev.whoteva.anglersedge.event;
 
+import dev.whoteva.anglersedge.advancement.AnglersCriteria;
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import dev.whoteva.anglersedge.item.BaitItem;
 import dev.whoteva.anglersedge.item.FishingJournalItem;
-import dev.whoteva.anglersedge.item.ModItems;
+import dev.whoteva.anglersedge.item.JournalProgress;
 import dev.whoteva.anglersedge.item.TieredFishingRodItem;
 import dev.whoteva.anglersedge.util.BiomeCategory;
+import dev.whoteva.anglersedge.util.FishCatalog;
 import dev.whoteva.anglersedge.util.FishWeight;
 import net.minecraft.core.NonNullList;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -34,14 +37,19 @@ public final class FishingEventHandler {
         Player player = event.getEntity();
         NonNullList<ItemStack> drops = event.getDrops();
 
+        // Biome flavor first, then bait, so Ghost Bait still replaces a biome fish with treasure.
+        applyBiomeFlavor(event, drops);
+
         ItemStack offhand = player.getItemInHand(InteractionHand.OFF_HAND);
         if (!drops.isEmpty() && offhand.getItem() instanceof BaitItem bait) {
             bait.effect().apply(drops, player.getRandom());
             offhand.shrink(1);
+            if (player instanceof ServerPlayer serverPlayer) {
+                AnglersCriteria.trigger(serverPlayer, AnglersCriteria.BAIT_USED);
+            }
         }
 
         applyRodBonus(player, drops);
-        applyBiomeFlavor(event, drops);
         applyFishWeights(player, drops);
         logToJournal(player, drops);
     }
@@ -55,30 +63,22 @@ public final class FishingEventHandler {
         }
     }
 
-    private static final float BIOME_FISH_CHANCE = 0.15F;
-
     /**
      * Handheld rods roll vanilla's shared fishing table internally (inside {@code FishingHook},
      * before this event fires) so there's no clean way to swap in a different loot table the way
      * the auto-fisher does. Instead, post-process: a small chance to replace one drop with a
-     * species from {@link dev.whoteva.anglersedge.util.BiomeCategory} for wherever the bobber
-     * landed, so handheld fishing gets a taste of the same biome variety without needing a mixin.
+     * species from {@link FishCatalog} for wherever the bobber landed.
      */
     private static void applyBiomeFlavor(ItemFishedEvent event, NonNullList<ItemStack> drops) {
         if (drops.isEmpty()) {
             return;
         }
         Player player = event.getEntity();
-        if (player.getRandom().nextFloat() >= BIOME_FISH_CHANCE) {
+        if (player.getRandom().nextFloat() >= AnglersConfig.BIOME_FLAVOR_CHANCE.get()) {
             return;
         }
         String category = BiomeCategory.at(player.level(), event.getHookEntity().blockPosition());
-        Item species = switch (category) {
-            case "ocean" -> ModItems.GLIMMERFIN.get();
-            case "swamp" -> ModItems.SWAMP_EEL.get();
-            case "river" -> player.getRandom().nextBoolean() ? ModItems.GLIMMERFIN.get() : ModItems.SWAMP_EEL.get();
-            default -> null;
-        };
+        Item species = FishCatalog.flavorCatch(category, player.getRandom());
         if (species == null) {
             return;
         }
@@ -95,13 +95,27 @@ public final class FishingEventHandler {
         if (!(mainHand.getItem() instanceof TieredFishingRodItem rod)) {
             return;
         }
-        float chance = rod.bonusRollChance();
+        float chance = rod.bonusRollChance() > 0f ? AnglersConfig.LEVIATHAN_BONUS_CHANCE.get().floatValue() : 0f;
         if (chance <= 0f || player.getRandom().nextFloat() >= chance) {
             return;
         }
         ItemStack bonus = drops.get(player.getRandom().nextInt(drops.size())).copy();
         bonus.setCount(1);
         drops.add(bonus);
+    }
+
+    /** Records one catalog drop (a boss drop, for example) against the journal in the player's inventory. */
+    public static void recordCatch(Player player, ItemStack drop) {
+        String id = FishingJournalItem.catalogId(drop);
+        if (id == null) {
+            return;
+        }
+        ItemStack journal = findJournal(player);
+        if (journal.isEmpty()) {
+            return;
+        }
+        FishingJournalItem.record(journal, id);
+        JournalProgress.afterCatch(player, journal);
     }
 
     /** If a Fishing Journal is anywhere in the player's inventory, record every species just caught. */
@@ -113,12 +127,17 @@ public final class FishingEventHandler {
         if (journal.isEmpty()) {
             return;
         }
+        boolean logged = false;
         for (ItemStack drop : drops) {
-            if (drop.isEmpty()) {
+            String id = FishingJournalItem.catalogId(drop);
+            if (id == null) {
                 continue;
             }
-            String id = BuiltInRegistries.ITEM.getKey(drop.getItem()).toString();
             FishingJournalItem.record(journal, id);
+            logged = true;
+        }
+        if (logged) {
+            JournalProgress.afterCatch(player, journal);
         }
     }
 

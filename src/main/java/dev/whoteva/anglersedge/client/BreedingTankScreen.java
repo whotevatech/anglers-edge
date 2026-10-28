@@ -1,73 +1,89 @@
 package dev.whoteva.anglersedge.client;
 
+import dev.whoteva.anglersedge.AnglersEdge;
+import dev.whoteva.anglersedge.block.entity.BreedingTankBlockEntity;
 import dev.whoteva.anglersedge.inventory.BreedingTankMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * Drawn with {@link GuiGraphics#fill}, same approach as {@link AutoFisherScreen} (see its
- * javadoc for why): the slot squares are computed from the same coordinates
- * {@link BreedingTankMenu} places its {@code Slot}s at, so background art and interactive slots
- * can't drift apart.
+ * Pair slots, a progress arrow, and a take-only output. The bar and status come from data
+ * slots synced by the tank, including the "output full" stall.
  */
 public class BreedingTankScreen extends AbstractContainerScreen<BreedingTankMenu> {
 
-    private static final int PANEL_BG = 0xFFC6C6C6;
-    private static final int PANEL_BORDER = 0xFF373737;
-    private static final int SLOT_BORDER = 0xFF373737;
-    private static final int SLOT_BG = 0xFF8B8B8B;
-    private static final int PARENT_SLOT_BG = 0xFF6B8B6B;
+    private static final ResourceLocation TEXTURE =
+            ResourceLocation.fromNamespaceAndPath(AnglersEdge.MOD_ID, "textures/gui/breeding_tank.png");
 
     public BreedingTankScreen(BreedingTankMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 166;
-        this.inventoryLabelY = this.imageHeight - 94;
+        this.imageWidth = BreedingTankMenu.IMAGE_WIDTH;
+        this.imageHeight = BreedingTankMenu.IMAGE_HEIGHT;
+        this.inventoryLabelY = BreedingTankMenu.INV_Y - 12;
     }
 
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        int x = (width - imageWidth) / 2;
-        int y = (height - imageHeight) / 2;
+        int x = leftPos;
+        int y = topPos;
+        graphics.blit(TEXTURE, x, y, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
 
-        graphics.fill(x, y, x + imageWidth, y + imageHeight, PANEL_BG);
-        graphics.fill(x, y, x + imageWidth, y + 1, PANEL_BORDER);
-        graphics.fill(x, y + imageHeight - 1, x + imageWidth, y + imageHeight, PANEL_BORDER);
-        graphics.fill(x, y, x + 1, y + imageHeight, PANEL_BORDER);
-        graphics.fill(x + imageWidth - 1, y, x + imageWidth, y + imageHeight, PANEL_BORDER);
-
-        // Breeding-pair slots (tinted green to mark them as special) - same (62, 17) / (98, 17)
-        // origin as BreedingTankMenu's addSlot calls.
-        drawSlot(graphics, x + 62, y + 17, PARENT_SLOT_BG);
-        drawSlot(graphics, x + 98, y + 17, PARENT_SLOT_BG);
-
-        // Output grid - same (62 + col*18, 44 + row*18) origin as BreedingTankMenu.
+        TackleGui.drawParentSlot(graphics, x + BreedingTankMenu.PARENT_A_X, y + BreedingTankMenu.PARENT_A_Y);
+        TackleGui.drawParentSlot(graphics, x + BreedingTankMenu.PARENT_B_X, y + BreedingTankMenu.PARENT_B_Y);
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 3; col++) {
-                drawSlot(graphics, x + 62 + col * 18, y + 44 + row * 18, SLOT_BG);
+                TackleGui.drawSlot(graphics, x + BreedingTankMenu.OUTPUT_X + col * 18, y + BreedingTankMenu.OUTPUT_Y + row * 18);
             }
+        }
+        TackleGui.drawPlayerSlots(graphics, x, y + BreedingTankMenu.INV_Y, y + BreedingTankMenu.HOTBAR_Y);
+
+        if (!menu.getSlot(0).hasItem()) {
+            TackleGui.drawGhostFish(graphics, x + BreedingTankMenu.PARENT_A_X, y + BreedingTankMenu.PARENT_A_Y);
+        }
+        if (!menu.getSlot(1).hasItem()) {
+            TackleGui.drawGhostFish(graphics, x + BreedingTankMenu.PARENT_B_X, y + BreedingTankMenu.PARENT_B_Y);
         }
 
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                drawSlot(graphics, x + 8 + col * 18, y + 84 + row * 18, SLOT_BG);
-            }
-        }
-        for (int col = 0; col < 9; col++) {
-            drawSlot(graphics, x + 8 + col * 18, y + 142, SLOT_BG);
-        }
+        int progress = menu.synced(0);
+        int required = Math.max(1, menu.synced(1));
+        int status = menu.synced(2);
+        float pct = status == BreedingTankBlockEntity.STATUS_BREEDING || status == BreedingTankBlockEntity.STATUS_FULL
+                ? progress / (float) required
+                : 0f;
+        TackleGui.drawArrow(graphics, x + 77, y + BreedingTankMenu.PARENT_A_Y + 4, pct);
+        int fill = status == BreedingTankBlockEntity.STATUS_FULL ? 0xFF8E3B2E : 0xFF1F6F78;
+        TackleGui.drawBar(graphics, x + 8, y + BreedingTankMenu.BAR_Y, imageWidth - 16, 6, pct, fill);
     }
 
-    private static void drawSlot(GuiGraphics graphics, int x, int y, int background) {
-        graphics.fill(x, y, x + 18, y + 18, SLOT_BORDER);
-        graphics.fill(x + 1, y + 1, x + 17, y + 17, background);
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        super.renderLabels(graphics, mouseX, mouseY);
+        int status = menu.synced(2);
+        Component text = switch (status) {
+            case BreedingTankBlockEntity.STATUS_NO_WATER -> Component.translatable("gui.anglersedge.needs_water");
+            case BreedingTankBlockEntity.STATUS_MISMATCH -> Component.translatable("gui.anglersedge.pair_mismatch");
+            case BreedingTankBlockEntity.STATUS_BREEDING -> Component.translatable("gui.anglersedge.breeding");
+            case BreedingTankBlockEntity.STATUS_FULL -> Component.translatable("gui.anglersedge.output_full");
+            default -> Component.translatable("gui.anglersedge.pair_empty");
+        };
+        int color = (status == BreedingTankBlockEntity.STATUS_NO_WATER
+                || status == BreedingTankBlockEntity.STATUS_MISMATCH
+                || status == BreedingTankBlockEntity.STATUS_FULL) ? TackleGui.WARN : TackleGui.LABEL;
+        if (status == BreedingTankBlockEntity.STATUS_BREEDING) {
+            color = TackleGui.GOOD;
+        }
+        graphics.drawString(font, text, 8, BreedingTankMenu.STATUS_Y, color, false);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
+        if (hoveredSlot != null && !hoveredSlot.hasItem() && hoveredSlot.index <= 1) {
+            graphics.renderTooltip(font, Component.translatable("tooltip.anglersedge.slot_parent"), mouseX, mouseY);
+        }
     }
 }

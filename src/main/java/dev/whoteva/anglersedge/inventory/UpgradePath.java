@@ -1,6 +1,7 @@
 package dev.whoteva.anglersedge.inventory;
 
 import dev.whoteva.anglersedge.item.ModItems;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -35,6 +36,48 @@ public final class UpgradePath {
     public static int materialCost(ItemStack rod, ItemStack material) {
         Step step = findStep(rod, material);
         return step == null ? 0 : step.materialCount();
+    }
+
+    /**
+     * A short status line when the left slot is one of the known rods, or null when this pair
+     * is not a rod upgrade (so bait recipes can take a turn).
+     */
+    public static Component hint(ItemStack rod, ItemStack material) {
+        if (rod.isEmpty() || !isKnownRod(rod)) {
+            return null;
+        }
+        if (rod.getCount() != 1) {
+            return Component.translatable("gui.anglersedge.upgrade_single");
+        }
+        Step step = findByRod(rod);
+        if (step == null) {
+            return Component.translatable("gui.anglersedge.upgrade_top");
+        }
+        if (!preview(rod, material).isEmpty()) {
+            return Component.translatable("gui.anglersedge.upgrade_ready", preview(rod, material).getHoverName());
+        }
+        Component materialName = Component.translatable(step.material().getDescriptionId());
+        Component resultName = Component.translatable(step.toRod().getDescriptionId());
+        if (material.isEmpty()) {
+            return Component.translatable("gui.anglersedge.upgrade_need", step.materialCount(), materialName, resultName);
+        }
+        if (material.is(step.material()) && material.getCount() < step.materialCount()) {
+            return Component.translatable("gui.anglersedge.upgrade_short", step.materialCount(), materialName, material.getCount());
+        }
+        return Component.translatable("gui.anglersedge.upgrade_wrong", materialName, step.materialCount(), resultName);
+    }
+
+    private static boolean isKnownRod(ItemStack rod) {
+        return rod.is(ModItems.STURDY_ROD.get()) || rod.is(ModItems.ANGLERS_ROD.get()) || rod.is(ModItems.LEVIATHAN_ROD.get());
+    }
+
+    private static Step findByRod(ItemStack rod) {
+        for (Step step : STEPS) {
+            if (rod.is(step.fromRod())) {
+                return step;
+            }
+        }
+        return null;
     }
 
     private static Step findStep(ItemStack rod, ItemStack material) {

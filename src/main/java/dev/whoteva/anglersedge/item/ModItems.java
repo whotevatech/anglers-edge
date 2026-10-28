@@ -56,49 +56,59 @@ public final class ModItems {
 
     public static final DeferredHolder<Item, Item> GLIMMERFIN = ITEMS.register(
             "glimmerfin",
-            () -> new Item(new Item.Properties().food(
-                    new FoodProperties.Builder().nutrition(3).saturationModifier(0.15F).build())));
+            () -> new CatalogFishItem(new Item.Properties().food(food(3, 0.15F))));
 
     public static final DeferredHolder<Item, Item> SWAMP_EEL = ITEMS.register(
             "swamp_eel",
-            () -> new Item(new Item.Properties().food(
-                    new FoodProperties.Builder().nutrition(2).saturationModifier(0.1F).build())));
+            () -> new CatalogFishItem(new Item.Properties().food(food(2, 0.1F))));
 
     public static final DeferredHolder<Item, Item> ABYSSAL_RAY = ITEMS.register(
             "abyssal_ray",
-            () -> new Item(new Item.Properties().food(
-                    new FoodProperties.Builder().nutrition(6).saturationModifier(0.4F).build())));
+            () -> new CatalogFishItem(new Item.Properties().food(food(6, 0.4F))));
+
+    /** Warm-ocean fish. See the warm fishing loot table. */
+    public static final DeferredHolder<Item, Item> SUNSCALE = ITEMS.register(
+            "sunscale",
+            () -> new CatalogFishItem(new Item.Properties().food(food(3, 0.2F))));
+
+    /** Cold-ocean and frozen-river fish. */
+    public static final DeferredHolder<Item, Item> FROST_CHAR = ITEMS.register(
+            "frost_char",
+            () -> new CatalogFishItem(new Item.Properties().food(food(4, 0.3F))));
+
+    /** Lush-cave and dripstone-cave fish. */
+    public static final DeferredHolder<Item, Item> CAVE_LOACH = ITEMS.register(
+            "cave_loach",
+            () -> new CatalogFishItem(new Item.Properties().food(food(2, 0.15F))));
 
     /** Drops only from the Ancient Leviathan - see dev.whoteva.anglersedge.event.LeviathanEncounterHandler. */
     public static final DeferredHolder<Item, Item> LEVIATHAN_SCALE = ITEMS.register(
             "leviathan_scale",
-            () -> new Item(new Item.Properties()));
+            () -> new CatalogFishItem(new Item.Properties()));
 
     public static final DeferredHolder<Item, Item> REEF_CRAB = ITEMS.register(
             "reef_crab",
-            () -> new Item(new Item.Properties().food(
-                    new FoodProperties.Builder().nutrition(2).saturationModifier(0.2F).build())));
+            () -> new CatalogFishItem(new Item.Properties().food(food(2, 0.2F))));
 
     public static final DeferredHolder<Item, Item> ANGLERFISH = ITEMS.register(
             "anglerfish",
-            () -> new Item(new Item.Properties().food(
-                    new FoodProperties.Builder().nutrition(5).saturationModifier(0.3F).build())));
+            () -> new CatalogFishItem(new Item.Properties().food(food(5, 0.3F))));
 
     /** Drops only from the Reef Shark - see dev.whoteva.anglersedge.event.ReefSharkHandler. */
     public static final DeferredHolder<Item, Item> SHARK_TOOTH = ITEMS.register(
             "shark_tooth",
-            () -> new Item(new Item.Properties()));
+            () -> new CatalogFishItem(new Item.Properties()));
 
     // --- Auto-fisher upgrades -----------------------------------------------------------
 
     public static final DeferredHolder<Item, Item> REEL_UPGRADE = ITEMS.register(
             "reel_upgrade",
-            () -> new Item(new Item.Properties()));
+            () -> new HintedItem(new Item.Properties(), "tooltip.anglersedge.reel_upgrade"));
 
     /** Crafting ingredient - woven string net, used to build the auto-fisher (see its recipe). */
     public static final DeferredHolder<Item, Item> NET = ITEMS.register(
             "net",
-            () -> new Item(new Item.Properties()));
+            () -> new HintedItem(new Item.Properties(), "tooltip.anglersedge.net"));
 
     // --- Journal -----------------------------------------------------------------------
 
@@ -110,17 +120,25 @@ public final class ModItems {
     // Registering a block does NOT register a corresponding item - without these, the blocks
     // can be placed via /setblock but never held, crafted, dropped, or shown in a creative tab.
 
-    public static final DeferredHolder<Item, BlockItem> UPGRADE_STATION = ITEMS.registerSimpleBlockItem(
-            "upgrade_station", ModBlocks.UPGRADE_STATION);
+    public static final DeferredHolder<Item, BlockItem> UPGRADE_STATION = ITEMS.register(
+            "upgrade_station",
+            () -> new HintedBlockItem(ModBlocks.UPGRADE_STATION.get(), new Item.Properties(), "tooltip.anglersedge.upgrade_station"));
 
-    public static final DeferredHolder<Item, BlockItem> AUTO_FISHER = ITEMS.registerSimpleBlockItem(
-            "auto_fisher", ModBlocks.AUTO_FISHER);
+    public static final DeferredHolder<Item, BlockItem> AUTO_FISHER = ITEMS.register(
+            "auto_fisher",
+            () -> new HintedBlockItem(ModBlocks.AUTO_FISHER.get(), new Item.Properties(), "tooltip.anglersedge.auto_fisher"));
 
-    public static final DeferredHolder<Item, BlockItem> FISH_TROPHY = ITEMS.registerSimpleBlockItem(
-            "fish_trophy", ModBlocks.FISH_TROPHY);
+    public static final DeferredHolder<Item, BlockItem> FISH_TROPHY = ITEMS.register(
+            "fish_trophy",
+            () -> new HintedBlockItem(ModBlocks.FISH_TROPHY.get(), new Item.Properties(), "tooltip.anglersedge.fish_trophy"));
 
-    public static final DeferredHolder<Item, BlockItem> BREEDING_TANK = ITEMS.registerSimpleBlockItem(
-            "breeding_tank", ModBlocks.BREEDING_TANK);
+    public static final DeferredHolder<Item, BlockItem> BREEDING_TANK = ITEMS.register(
+            "breeding_tank",
+            () -> new HintedBlockItem(ModBlocks.BREEDING_TANK.get(), new Item.Properties(), "tooltip.anglersedge.breeding_tank"));
+
+    private static FoodProperties food(int nutrition, float saturation) {
+        return new FoodProperties.Builder().nutrition(nutrition).saturationModifier(saturation).build();
+    }
 
     private ModItems() {
     }

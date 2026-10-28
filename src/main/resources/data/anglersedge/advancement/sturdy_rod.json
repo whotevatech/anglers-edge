@@ -1,0 +1,34 @@
+{
+  "display": {
+    "icon": {
+      "id": "anglersedge:sturdy_rod"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.sturdy_rod.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.sturdy_rod.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "have": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "anglersedge:sturdy_rod"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "have"
+    ]
+  ],
+  "parent": "anglersedge:root"
+}

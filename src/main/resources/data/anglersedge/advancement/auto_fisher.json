@@ -1,0 +1,34 @@
+{
+  "display": {
+    "icon": {
+      "id": "anglersedge:auto_fisher"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.auto_fisher.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.auto_fisher.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "have": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "anglersedge:auto_fisher"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "have"
+    ]
+  ],
+  "parent": "anglersedge:root"
+}

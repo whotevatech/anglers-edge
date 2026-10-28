@@ -12,6 +12,18 @@ import net.minecraft.world.item.ItemStack;
 
 public class UpgradeStationMenu extends AbstractContainerMenu {
 
+    public static final int IMAGE_WIDTH = 176;
+    public static final int IMAGE_HEIGHT = 176;
+    public static final int ROD_X = 27;
+    public static final int ROD_Y = 27;
+    public static final int MAT_X = 63;
+    public static final int MAT_Y = 27;
+    public static final int RESULT_X = 124;
+    public static final int RESULT_Y = 27;
+    public static final int INV_Y = 88;
+    public static final int HOTBAR_Y = 146;
+    public static final int HINT_Y = 50;
+
     private static final int ROD_SLOT = 0;
     private static final int MATERIAL_SLOT = 1;
     private static final int RESULT_SLOT = 2;
@@ -33,17 +45,21 @@ public class UpgradeStationMenu extends AbstractContainerMenu {
         this.access = access;
         container.startOpen(playerInventory.player);
 
-        addSlot(new Slot(container, ROD_SLOT, 44, 35));
-        addSlot(new Slot(container, MATERIAL_SLOT, 62, 35));
-        addSlot(new UpgradeResultSlot(container, RESULT_SLOT, 116, 35));
+        addSlot(new Slot(container, ROD_SLOT, ROD_X, ROD_Y));
+        addSlot(new Slot(container, MATERIAL_SLOT, MAT_X, MAT_Y));
+        addSlot(new UpgradeResultSlot(container, RESULT_SLOT, RESULT_X, RESULT_Y));
 
+        addPlayerSlots(playerInventory);
+    }
+
+    private void addPlayerSlots(Inventory playerInventory) {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, INV_Y + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, 8 + col * 18, HOTBAR_Y));
         }
     }
 
@@ -53,8 +69,6 @@ public class UpgradeStationMenu extends AbstractContainerMenu {
         ItemStack slotB = container.getItem(MATERIAL_SLOT);
         ItemStack expected = UpgradePath.preview(slotA, slotB);
         if (expected.isEmpty()) {
-            // Same two slots double as bait-crafting inputs - see BaitPath's javadoc for why
-            // the two recipe sets never collide.
             expected = BaitPath.preview(slotA, slotB);
         }
         if (!ItemStack.matches(expected, container.getItem(RESULT_SLOT))) {
@@ -72,23 +86,50 @@ public class UpgradeStationMenu extends AbstractContainerMenu {
 
         ItemStack original = slot.getItem();
         ItemStack moving = original.copy();
+        int before = original.getCount();
 
-        if (index < PLAYER_INV_START) {
+        if (index == RESULT_SLOT) {
+            // Taking a partial stack would consume the inputs and leave a free remainder.
+            if (!canFullyFit(original, PLAYER_INV_START, slots.size())) {
+                return ItemStack.EMPTY;
+            }
             if (!moveItemStackTo(original, PLAYER_INV_START, slots.size(), true)) {
                 return ItemStack.EMPTY;
             }
-        } else {
-            if (!moveItemStackTo(original, ROD_SLOT, RESULT_SLOT, false)) {
+            if (original.isEmpty()) {
+                slot.onTake(player, moving);
+                slot.set(ItemStack.EMPTY);
+            }
+        } else if (index < PLAYER_INV_START) {
+            if (!moveItemStackTo(original, PLAYER_INV_START, slots.size(), true)) {
                 return ItemStack.EMPTY;
             }
+        } else if (!moveItemStackTo(original, ROD_SLOT, RESULT_SLOT, false)) {
+            return ItemStack.EMPTY;
         }
 
+        if (original.getCount() == before) {
+            return ItemStack.EMPTY;
+        }
         if (original.isEmpty()) {
             slot.set(ItemStack.EMPTY);
         } else {
             slot.setChanged();
         }
         return moving;
+    }
+
+    private boolean canFullyFit(ItemStack stack, int start, int end) {
+        int remaining = stack.getCount();
+        for (int i = start; i < end && remaining > 0; i++) {
+            ItemStack existing = slots.get(i).getItem();
+            if (existing.isEmpty()) {
+                remaining -= Math.min(remaining, stack.getMaxStackSize());
+            } else if (ItemStack.isSameItemSameComponents(existing, stack)) {
+                remaining -= Math.min(remaining, existing.getMaxStackSize() - existing.getCount());
+            }
+        }
+        return remaining <= 0;
     }
 
     @Override

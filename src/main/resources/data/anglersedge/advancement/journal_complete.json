@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "anglersedge:fishing_journal"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.journal_complete.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.journal_complete.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "caught": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "journal_complete"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "caught"
+    ]
+  ],
+  "parent": "anglersedge:species_10"
+}

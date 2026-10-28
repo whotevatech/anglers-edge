@@ -1,7 +1,7 @@
 # Angler's Edge
 
-A small NeoForge 1.21.1 content mod: rod tiers, bait, an upgrade station, and an auto-fisher.
-Mod ID `anglersedge` (easy to rename — see below).
+A NeoForge 1.21.1 fishing overhaul: rod tiers, bait, an upgrade station, an auto-fisher, a journal, trophies, breeding, and rare encounters.
+Mod ID `anglersedge`. Version 1.1.0. License MIT.
 
 ## What's in it
 
@@ -43,7 +43,7 @@ run `gradle wrapper --gradle-version 8.10` once inside the project, or copy them
 NeoForge MDK, same as you did for the SkyGrid pack.
 
 ```bash
-./gradlew build          # -> build/libs/anglersedge-1.0.0.jar
+./gradlew build          # -> build/libs/anglersedge-1.1.0.jar
 ./gradlew runClient       # dev world with everything in the "Angler's Edge" creative tab
 ```
 
@@ -60,17 +60,12 @@ pipeline isn't possible in this sandbox — the same RAM ceiling documented in t
 What this **doesn't** cover: runtime behaviour. `runClient` is still the real test — same caveat
 as SkyGrid.
 
-## Known gaps in this first pass
+## Known gaps
 
-- Textures are flat placeholder art (rods are a coloured line + handle, baits are blobs, blocks
-  are bordered squares) generated in this session, not hand-drawn or AI-art. Swap the PNGs under
-  `src/main/resources/assets/anglersedge/textures/` for real art any time — nothing in the Java
-  code references pixel content, just file paths.
-- Breaking the upgrade station or auto-fisher drops the block but not its inventory contents
-  (no `copy_state`/container loot function on the loot tables yet).
-- Bait's junk/treasure/fish item lists are hand-maintained, not read from the actual datapack
-  registry — see the comment in `BaitEffect`.
-- No new fish species yet, per the initial scope call.
+- Reef Shark and Ancient Leviathan reuse vanilla guardians (named, glowing, tagged) rather than custom models.
+- Bait's junk/treasure/fish item lists are hand-maintained, not read from the fishing loot table — see `BaitEffect`.
+- Gameplay rates live in `config/anglersedge-common.toml`. There is no in-game config screen.
+- See `CHANGELOG.md` for the 1.1.0 screen, texture, and content pass.
 
 ## Renaming
 

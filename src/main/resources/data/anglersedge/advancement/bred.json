@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "minecraft:salmon"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.bred.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.bred.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "bred": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "fish_bred"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "bred"
+    ]
+  ],
+  "parent": "anglersedge:first_catch"
+}

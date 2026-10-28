@@ -1,8 +1,9 @@
 package dev.whoteva.anglersedge.event;
 
+import dev.whoteva.anglersedge.advancement.AnglersCriteria;
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import dev.whoteva.anglersedge.item.ModItems;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -11,6 +12,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.ElderGuardian;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FishingHook;
 import net.minecraft.world.item.ItemStack;
@@ -35,7 +39,7 @@ import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
  */
 public final class LeviathanEncounterHandler {
 
-    private static final float ENCOUNTER_CHANCE = 0.03F;
+    public static final String TAG = "anglersedge_leviathan";
     private static final java.util.Set<java.util.UUID> LEVIATHAN_IDS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private LeviathanEncounterHandler() {
@@ -43,35 +47,45 @@ public final class LeviathanEncounterHandler {
 
     @SubscribeEvent
     public static void onItemFished(ItemFishedEvent event) {
+        EncounterGate.reset();
         Player player = event.getEntity();
-        if (player.getRandom().nextFloat() >= ENCOUNTER_CHANCE) {
+        if (player.getRandom().nextFloat() >= AnglersConfig.LEVIATHAN_CHANCE.get()) {
             return;
         }
         if (!(player.level() instanceof ServerLevel serverLevel)) {
             return;
         }
         FishingHook hook = event.getHookEntity();
+        if (!EncounterGate.tryClaim(hook)) {
+            return;
+        }
 
         ElderGuardian leviathan = EntityType.ELDER_GUARDIAN.create(serverLevel);
         if (leviathan == null) {
             return;
         }
         leviathan.moveTo(hook.getX(), hook.getY() - 1, hook.getZ(), 0F, 0F);
-        leviathan.setCustomName(Component.literal("Ancient Leviathan").withStyle(ChatFormatting.DARK_AQUA));
+        leviathan.setCustomName(Component.translatable("entity.anglersedge.ancient_leviathan")
+                .withStyle(ChatFormatting.DARK_AQUA));
         leviathan.setCustomNameVisible(true);
+        leviathan.addTag(TAG);
+        leviathan.setPersistenceRequired();
+        leviathan.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 20, 0));
         LEVIATHAN_IDS.add(leviathan.getUUID());
         serverLevel.addFreshEntity(leviathan);
 
-        player.sendSystemMessage(Component.literal("The water churns... something ancient rises!")
-                .withStyle(ChatFormatting.DARK_AQUA));
-        serverLevel.playSound((Player) null, hook.blockPosition(), SoundEvents.ELDER_GUARDIAN_AMBIENT_LAND,
-                SoundSource.HOSTILE, 1.0F, 0.8F);
+        WaterTelegraph.burst(serverLevel, hook.getX(), hook.getY(), hook.getZ(), true);
+        Component message = Component.translatable("message.anglersedge.leviathan").withStyle(ChatFormatting.DARK_AQUA);
+        player.displayClientMessage(message, true);
+        player.sendSystemMessage(message);
+        serverLevel.playSound(null, hook.blockPosition(), SoundEvents.ELDER_GUARDIAN_AMBIENT_LAND, SoundSource.HOSTILE, 1.0F, 0.7F);
+        serverLevel.playSound(null, hook.blockPosition(), SoundEvents.GENERIC_SPLASH, SoundSource.NEUTRAL, 1.0F, 0.6F);
     }
 
     @SubscribeEvent
     public static void onLivingDrops(LivingDropsEvent event) {
         LivingEntity entity = event.getEntity();
-        if (!LEVIATHAN_IDS.remove(entity.getUUID())) {
+        if (!LEVIATHAN_IDS.remove(entity.getUUID()) && !entity.getTags().contains(TAG)) {
             return;
         }
         Vec3 pos = entity.position();
@@ -79,5 +93,9 @@ public final class LeviathanEncounterHandler {
         ItemStack scales = new ItemStack(ModItems.LEVIATHAN_SCALE.get(), count);
         dev.whoteva.anglersedge.util.FishRarity.applyTagOnly(scales);
         event.getDrops().add(new ItemEntity(entity.level(), pos.x, pos.y, pos.z, scales));
+        if (event.getSource().getEntity() instanceof ServerPlayer player) {
+            AnglersCriteria.trigger(player, AnglersCriteria.LEVIATHAN_SLAIN);
+            FishingEventHandler.recordCatch(player, scales);
+        }
     }
 }

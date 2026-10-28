@@ -3,6 +3,7 @@ package dev.whoteva.anglersedge.block;
 import com.mojang.serialization.MapCodec;
 import dev.whoteva.anglersedge.block.entity.AutoFisherBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
@@ -52,5 +53,14 @@ public class AutoFisherBlock extends BaseEntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
         return createTickerHelper(type, ModBlockEntities.AUTO_FISHER.get(), AutoFisherBlockEntity::tick);
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof AutoFisherBlockEntity fisher) {
+            Containers.dropContents(level, pos, fisher);
+            Containers.dropContents(level, pos, fisher.upgrades());
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }

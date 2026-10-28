@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:fishing",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/junk", "weight": 10, "quality": -2 },
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/treasure", "weight": 5, "quality": 2 },
+        { "type": "minecraft:loot_table", "value": "minecraft:gameplay/fishing/fish", "weight": 40, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:frost_char", "weight": 26, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:glimmerfin", "weight": 12, "quality": 1 },
+        { "type": "minecraft:item", "name": "anglersedge:abyssal_ray", "weight": 4, "quality": 2 }
+      ]
+    }
+  ]
+}

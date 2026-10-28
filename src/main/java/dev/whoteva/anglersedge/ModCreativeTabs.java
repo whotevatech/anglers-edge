@@ -37,12 +37,15 @@ public final class ModCreativeTabs {
             event.accept(ModItems.FRENZY_BAIT.get());
             event.accept(ModItems.GHOST_BAIT.get());
             event.accept(ModItems.GLIMMERFIN.get());
+            event.accept(ModItems.SUNSCALE.get());
+            event.accept(ModItems.FROST_CHAR.get());
             event.accept(ModItems.SWAMP_EEL.get());
-            event.accept(ModItems.ABYSSAL_RAY.get());
-            event.accept(ModItems.LEVIATHAN_SCALE.get());
             event.accept(ModItems.REEF_CRAB.get());
+            event.accept(ModItems.CAVE_LOACH.get());
             event.accept(ModItems.ANGLERFISH.get());
+            event.accept(ModItems.ABYSSAL_RAY.get());
             event.accept(ModItems.SHARK_TOOTH.get());
+            event.accept(ModItems.LEVIATHAN_SCALE.get());
             event.accept(ModItems.FISHING_JOURNAL.get());
             event.accept(ModItems.REEL_UPGRADE.get());
             event.accept(ModItems.NET.get());

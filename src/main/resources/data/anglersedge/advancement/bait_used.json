@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "anglersedge:shiny_lure"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.bait_used.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.bait_used.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "used": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "bait_used"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "used"
+    ]
+  ],
+  "parent": "anglersedge:root"
+}

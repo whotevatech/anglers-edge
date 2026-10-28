@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "id": "anglersedge:leviathan_scale"
+    },
+    "title": {
+      "translate": "advancement.anglersedge.leviathan.title"
+    },
+    "description": {
+      "translate": "advancement.anglersedge.leviathan.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "slain": {
+      "trigger": "anglersedge:milestone",
+      "conditions": {
+        "milestone": "leviathan_slain"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "slain"
+    ]
+  ],
+  "parent": "anglersedge:shark"
+}

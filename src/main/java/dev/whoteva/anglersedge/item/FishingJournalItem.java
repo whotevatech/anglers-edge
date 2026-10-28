@@ -1,26 +1,29 @@
 package dev.whoteva.anglersedge.item;
 
+import dev.whoteva.anglersedge.client.JournalClient;
+import dev.whoteva.anglersedge.util.FishCatalog;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.Level;
 
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * A book that logs every catch this mod's fishing has made while it was somewhere in the
- * player's inventory - both which species have been seen and how many of each. Deliberately
- * simple: the log is stored directly on the item stack via the vanilla {@link CustomData}
- * component (a plain {@code CompoundTag} of {@code registry id -> count}, the same mechanism
- * vanilla itself uses for arbitrary per-stack data), so there's no new registry, no capability,
- * and nothing to keep in sync - the journal stack itself is the save file. Picking up a second
- * journal starts a second, independent log.
+ * A book that logs catalog species caught while it sits in the player's inventory.
+ * Right-click opens the checklist. Counts live on the stack via {@link CustomData}.
  */
 public class FishingJournalItem extends Item {
 
@@ -30,7 +33,7 @@ public class FishingJournalItem extends Item {
         super(properties);
     }
 
-    /** Increments the recorded count for {@code itemId} (e.g. {@code "minecraft:cod"}) by one. */
+    /** Increments the recorded count for {@code itemId} (for example {@code "minecraft:cod"}) by one. */
     public static void record(ItemStack journalStack, String itemId) {
         CustomData existing = journalStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
         CompoundTag tag = existing.copyTag();
@@ -40,8 +43,8 @@ public class FishingJournalItem extends Item {
         CustomData.set(DataComponents.CUSTOM_DATA, journalStack, tag);
     }
 
-    /** Species id -> times caught, sorted alphabetically for a stable tooltip order. */
-    private static Map<String, Integer> caught(ItemStack stack) {
+    /** Species id to times caught. Older journals stored plain ints; that format is still read. */
+    public static Map<String, Integer> counts(ItemStack stack) {
         CustomData data = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
         CompoundTag counts = data.copyTag().getCompound(TAG_CAUGHT);
         Map<String, Integer> result = new TreeMap<>();
@@ -51,27 +54,66 @@ public class FishingJournalItem extends Item {
         return result;
     }
 
+    /** How many catalog species have a count of at least one. */
+    public static int discovered(ItemStack stack) {
+        Map<String, Integer> counts = counts(stack);
+        int discovered = 0;
+        for (FishCatalog.Species species : FishCatalog.all()) {
+            if (counts.getOrDefault(species.id(), 0) > 0) {
+                discovered++;
+            }
+        }
+        return discovered;
+    }
+
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (level.isClientSide) {
+            JournalClient.open(stack);
+        }
+        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+    }
+
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        Map<String, Integer> species = caught(stack);
-        int total = species.values().stream().mapToInt(Integer::intValue).sum();
+        Map<String, Integer> counts = counts(stack);
+        int discovered = discovered(stack);
+        int total = 0;
+        for (FishCatalog.Species species : FishCatalog.all()) {
+            total += counts.getOrDefault(species.id(), 0);
+        }
 
-        tooltip.add(Component.translatable("tooltip.anglersedge.journal_species", species.size())
+        tooltip.add(Component.translatable("tooltip.anglersedge.journal_species", discovered, FishCatalog.size())
                 .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.anglersedge.journal_total", total)
                 .withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.anglersedge.journal_open").withStyle(ChatFormatting.DARK_GRAY));
 
         int shown = 0;
-        for (Map.Entry<String, Integer> entry : species.entrySet()) {
-            if (shown >= 8) {
-                tooltip.add(Component.literal("...").withStyle(ChatFormatting.DARK_GRAY));
+        for (FishCatalog.Species species : FishCatalog.all()) {
+            int count = counts.getOrDefault(species.id(), 0);
+            if (count <= 0) {
+                continue;
+            }
+            if (shown >= 6) {
+                tooltip.add(Component.translatable("tooltip.anglersedge.journal_more", discovered - shown)
+                        .withStyle(ChatFormatting.DARK_GRAY));
                 break;
             }
-            String id = entry.getKey();
-            String name = id.contains(":") ? id.substring(id.indexOf(':') + 1) : id;
-            tooltip.add(Component.literal("- " + name + " x" + entry.getValue())
-                    .withStyle(ChatFormatting.DARK_AQUA));
+            tooltip.add(Component.translatable("tooltip.anglersedge.journal_line",
+                            Component.translatable(species.item().getDescriptionId()), count)
+                    .withStyle(species.rarity().color()));
             shown++;
         }
+    }
+
+    /** Registry id for a caught stack, or null when it is not a catalog species. */
+    public static String catalogId(ItemStack drop) {
+        if (drop.isEmpty() || FishCatalog.byItem(drop.getItem()) == null) {
+            return null;
+        }
+        ResourceLocation key = BuiltInRegistries.ITEM.getKey(drop.getItem());
+        return key.toString();
     }
 }

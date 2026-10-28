@@ -1,5 +1,7 @@
 package dev.whoteva.anglersedge.event;
 
+import dev.whoteva.anglersedge.advancement.AnglersCriteria;
+import dev.whoteva.anglersedge.config.AnglersConfig;
 import dev.whoteva.anglersedge.item.ModItems;
 import dev.whoteva.anglersedge.util.BiomeCategory;
 import net.minecraft.ChatFormatting;
@@ -11,6 +13,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FishingHook;
 import net.minecraft.world.item.ItemStack;
@@ -28,7 +33,7 @@ import net.neoforged.neoforge.event.entity.player.ItemFishedEvent;
  */
 public final class ReefSharkHandler {
 
-    private static final float ENCOUNTER_CHANCE = 0.06F;
+    public static final String TAG = "anglersedge_reef_shark";
     private static final java.util.Set<java.util.UUID> SHARK_IDS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private ReefSharkHandler() {
@@ -37,7 +42,7 @@ public final class ReefSharkHandler {
     @SubscribeEvent
     public static void onItemFished(ItemFishedEvent event) {
         Player player = event.getEntity();
-        if (player.getRandom().nextFloat() >= ENCOUNTER_CHANCE) {
+        if (player.getRandom().nextFloat() >= AnglersConfig.SHARK_CHANCE.get()) {
             return;
         }
         if (!(player.level() instanceof ServerLevel serverLevel)) {
@@ -45,7 +50,11 @@ public final class ReefSharkHandler {
         }
         FishingHook hook = event.getHookEntity();
         String category = BiomeCategory.at(serverLevel, hook.blockPosition());
-        if (!category.equals("ocean") && !category.equals("river")) {
+        if (!category.equals("ocean") && !category.equals("river") && !category.equals("warm")
+                && !category.equals("cold") && !category.equals("deep")) {
+            return;
+        }
+        if (!EncounterGate.tryClaim(hook)) {
             return;
         }
 
@@ -54,21 +63,24 @@ public final class ReefSharkHandler {
             return;
         }
         shark.moveTo(hook.getX(), hook.getY() - 1, hook.getZ(), 0F, 0F);
-        shark.setCustomName(Component.literal("Reef Shark").withStyle(ChatFormatting.GRAY));
+        shark.setCustomName(Component.translatable("entity.anglersedge.reef_shark").withStyle(ChatFormatting.GRAY));
         shark.setCustomNameVisible(true);
+        shark.addTag(TAG);
+        shark.setPersistenceRequired();
+        shark.addEffect(new MobEffectInstance(MobEffects.GLOWING, 20 * 12, 0));
         SHARK_IDS.add(shark.getUUID());
         serverLevel.addFreshEntity(shark);
 
-        player.sendSystemMessage(Component.literal("Something fast is circling your line!")
-                .withStyle(ChatFormatting.GRAY));
-        serverLevel.playSound((Player) null, hook.blockPosition(), SoundEvents.GUARDIAN_AMBIENT,
-                SoundSource.HOSTILE, 1.0F, 1.4F);
+        WaterTelegraph.burst(serverLevel, hook.getX(), hook.getY(), hook.getZ(), false);
+        player.displayClientMessage(Component.translatable("message.anglersedge.shark").withStyle(ChatFormatting.GRAY), true);
+        serverLevel.playSound(null, hook.blockPosition(), SoundEvents.GUARDIAN_AMBIENT, SoundSource.HOSTILE, 1.0F, 1.4F);
+        serverLevel.playSound(null, hook.blockPosition(), SoundEvents.FISHING_BOBBER_SPLASH, SoundSource.NEUTRAL, 0.8F, 1.2F);
     }
 
     @SubscribeEvent
     public static void onLivingDrops(LivingDropsEvent event) {
         LivingEntity entity = event.getEntity();
-        if (!SHARK_IDS.remove(entity.getUUID())) {
+        if (!SHARK_IDS.remove(entity.getUUID()) && !entity.getTags().contains(TAG)) {
             return;
         }
         Vec3 pos = entity.position();
@@ -76,5 +88,9 @@ public final class ReefSharkHandler {
         ItemStack teeth = new ItemStack(ModItems.SHARK_TOOTH.get(), count);
         dev.whoteva.anglersedge.util.FishRarity.applyTagOnly(teeth);
         event.getDrops().add(new ItemEntity(entity.level(), pos.x, pos.y, pos.z, teeth));
+        if (event.getSource().getEntity() instanceof ServerPlayer player) {
+            AnglersCriteria.trigger(player, AnglersCriteria.SHARK_SLAIN);
+            FishingEventHandler.recordCatch(player, teeth);
+        }
     }
 }
